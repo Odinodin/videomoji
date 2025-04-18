@@ -78,34 +78,37 @@
         (.replaceChildren js/content ascii-dom-element)))))
 
 ;; TODO replace js/variable with state atom
-(defn start-video [state]
+(defn render-video [state]
   (when (-> state :videomoji.views.main/view :video-started)
-    (let [size (-> state :videomoji.views.main/view :size)]
-      (prn "START VIDEO " size)
+    (let [size (-> state :videomoji.views.main/view :size)
+          running? (-> state :videomoji.views.main/view :video-paused? not)]
+
+      (prn "RENDER VIDEO " running?)
       (swap! local-state assoc :size size)
       (when-let [interval-id (@local-state :interval-id)]
         (js/clearInterval interval-id))
 
-      ;; Video element
-      (set! js/video (.querySelector js/document "video"))
+      (when running?
+        ;; Video element
+        (set! js/video (.querySelector js/document "video"))
 
-      (letfn [(handle-success [stream]
-                (set! (.-srcObject js/video) stream)
-                (.play js/video)
-                (set! js/content (.getElementById js/document "content")))
+        (letfn [(handle-success [stream]
+                  (set! (.-srcObject js/video) stream)
+                  (.play js/video)
+                  (set! js/content (.getElementById js/document "content")))
 
-              (handle-error [error]
-                (.log js/console "Error for getUserMedia: " (.-message error) (.-name error)))]
+                (handle-error [error]
+                  (.log js/console "Error for getUserMedia: " (.-message error) (.-name error)))]
 
-        (.addEventListener
-          js/video
-          "canplay"
-          (fn [ev] (swap! local-state assoc :interval-id (js/setInterval draw-frame 200)))
-          #js {:once true})
+          (.addEventListener
+            js/video
+            "canplay"
+            (fn [ev] (swap! local-state assoc :interval-id (js/setInterval draw-frame 200)))
+            #js {:once true})
 
-        (-> (.-mediaDevices js/navigator)
-            (.getUserMedia #js {:audio false
-                                :video true})
-            (.then handle-success)
-            (.catch handle-error))))))
+          (-> (.-mediaDevices js/navigator)
+              (.getUserMedia #js {:audio false
+                                  :video true})
+              (.then handle-success)
+              (.catch handle-error)))))))
 

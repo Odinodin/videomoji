@@ -36,7 +36,7 @@
 (defn init [store]
   (add-watch store ::render (fn [_ _ _ new-state]
                               ;; TODO consider using an effect to update video-state
-                              (video/start-video new-state)
+                              (video/render-video new-state)
                               (r/render
                                 js/document.body
                                 (render-ui new-state))))
