@@ -1,8 +1,127 @@
 (ns videomoji.video)
 
-(def local-state (atom {}))
+(def local-state (atom {:mapping-kind :emoji-colored}))
 
 (def dark-to-bright-emoji ["1F5A4", "1F977", "1F98D", "1F9BE", "1F993", "1F463", "1F47b", "1F480", "1F440", "1F9B4", "1F90D", "1F4AC", "1F5EF"])
+
+(def emoji-color-grayed-palette
+    [;; 🖤 Blacks & dark grays
+     {:emoji "⬛" :rgb [0 0 0]}
+     {:emoji "🖤" :rgb [30 30 30]}
+     {:emoji "⚫" :rgb [50 50 50]}
+     {:emoji "🎩" :rgb [60 60 60]}
+     {:emoji "🎱" :rgb [80 80 80]}
+     {:emoji "🕶" :rgb [100 100 100]}
+     {:emoji "💼" :rgb [110 110 110]}
+
+     ;; 🩶 Mid grays
+     {:emoji "🩶" :rgb [128 128 128]}
+     {:emoji "🧳" :rgb [140 140 140]}
+     {:emoji "🧥" :rgb [150 150 150]}
+     {:emoji "📎" :rgb [160 160 160]}
+
+     ;; 🤍 Light grays & whites
+     {:emoji "🗂" :rgb [180 180 180]}
+     {:emoji "📄" :rgb [220 220 220]}
+     {:emoji "🧻" :rgb [240 240 240]}
+     {:emoji "⚪" :rgb [250 250 250]}
+     {:emoji "⬜" :rgb [255 255 255]}
+
+     ;; 🔴 Reds
+     {:emoji "🟥" :rgb [255 0 0]}
+     {:emoji "🍎" :rgb [230 30 30]}
+     {:emoji "🍒" :rgb [222 49 99]}
+
+     ;; 🟠 Oranges
+     {:emoji "🟧" :rgb [255 165 0]}
+     {:emoji "🍊" :rgb [255 140 0]}
+     {:emoji "🥕" :rgb [255 110 40]}
+
+     ;; 🟡 Yellows
+     {:emoji "🟨" :rgb [255 255 0]}
+     {:emoji "🍌" :rgb [255 240 100]}
+
+     ;; 🟢 Greens
+     {:emoji "🟩" :rgb [0 128 0]}
+     {:emoji "🥝" :rgb [140 200 70]}
+     {:emoji "🥦" :rgb [90 150 80]}
+
+     ;; 🔵 Blues
+     {:emoji "🟦" :rgb [0 0 255]}
+     {:emoji "🫐" :rgb [70 100 200]}
+     {:emoji "🧊" :rgb [160 230 255]}
+
+     ;; 🟣 Purples
+     {:emoji "🟪" :rgb [128 0 128]}
+     {:emoji "🍇" :rgb [150 60 160]}
+     {:emoji "🔮" :rgb [120 0 200]}
+
+     ;; 🟤 Browns
+     {:emoji "🟫" :rgb [139 69 19]}
+     {:emoji "🍫" :rgb [123 63 0]}
+     {:emoji "🥔" :rgb [205 133 63]}
+     {:emoji "🪵" :rgb [165 94 54]}])
+
+(def emoji-colored-palette
+    [;; Reds
+     {:emoji "🟥" :rgb [255 0 0]}
+     {:emoji "🍎" :rgb [220 20 60]}
+     {:emoji "🍒" :rgb [222 49 99]}
+
+     ;; Oranges
+     {:emoji "🟧" :rgb [255 165 0]}
+     {:emoji "🍊" :rgb [255 140 0]}
+     {:emoji "🧡" :rgb [255 130 80]}
+
+     ;; Yellows
+     {:emoji "🟨" :rgb [255 255 0]}
+     {:emoji "🍌" :rgb [255 240 0]}
+     {:emoji "🌕" :rgb [255 250 180]}
+
+     ;; Greens
+     {:emoji "🟩" :rgb [0 128 0]}
+     {:emoji "🥝" :rgb [110 190 50]}
+     {:emoji "🥦" :rgb [85 130 70]}
+
+     ;; Blues
+     {:emoji "🟦" :rgb [0 0 255]}
+     {:emoji "🫐" :rgb [60 90 200]}
+     {:emoji "🧊" :rgb [150 230 255]}
+
+     ;; Purples
+     {:emoji "🟪" :rgb [128 0 128]}
+     {:emoji "🍇" :rgb [140 60 180]}
+     {:emoji "🔮" :rgb [120 0 255]}
+
+     ;; Browns
+     {:emoji "🟫" :rgb [139 69 19]}
+     {:emoji "🍫" :rgb [123 63 0]}
+     {:emoji "🥔" :rgb [205 133 63]}
+
+     ;; Grayscale
+     {:emoji "⬛" :rgb [0 0 0]}
+     {:emoji "⚫" :rgb [50 50 50]}
+     {:emoji "⚪" :rgb [230 230 230]}
+     {:emoji "⬜" :rgb [255 255 255]}
+
+     ;; Pinks
+     {:emoji "🌸" :rgb [255 182 193]}
+     {:emoji "🎀" :rgb [255 105 180]}
+
+     ;; Neutrals / Misc
+     {:emoji "🌈" :rgb [150 150 150]}                       ;; rainbow, used for ambiguous colors
+     ])
+
+(def emoji-square-palette
+  [{:emoji "🟥" :rgb [255 0 0]}
+   {:emoji "🟧" :rgb [255 165 0]}
+   {:emoji "🟨" :rgb [255 255 0]}
+   {:emoji "🟩" :rgb [0 128 0]}
+   {:emoji "🟦" :rgb [0 0 255]}
+   {:emoji "🟪" :rgb [128 0 128]}
+   {:emoji "⬛" :rgb [0 0 0]}
+   {:emoji "⬜" :rgb [255 255 255]}
+   {:emoji "🟫" :rgb [165 42 42]}])
 
 (defn get-pixel-at [image-data x y]
   (let [red-idx (+ (* y (* (.-width image-data) 4)) (* x 4))]
@@ -25,7 +144,26 @@
       "&nbsp;"
       (str "&#x" character ";"))))
 
-(defn convert-to-dom-element [image-data document dark-to-bright-array & [font-size]]
+(defn color-distance [[r1 g1 b1] [r2 g2 b2]]
+  (Math/sqrt
+    (+ (Math/pow (- r1 r2) 2)
+       (Math/pow (- g1 g2) 2)
+       (Math/pow (- b1 b2) 2))))
+
+(defn closest-emoji [{:keys [red green blue _alpha]} emoji-palette]
+  (let [input-color [red green blue]]
+    (:emoji
+      (apply min-key #(color-distance input-color (:rgb %)) emoji-palette))))
+
+(defn pixel-to-character [kind image-data col row]
+  (case kind
+        :monochrome (brightness-to-char dark-to-bright-emoji (brightness-at image-data col row))
+        :emoji-squares (closest-emoji (get-pixel-at image-data col row) emoji-square-palette)
+        :emoji-colored (closest-emoji (get-pixel-at image-data col row) emoji-colored-palette)
+        :emoji-colored-grayed (closest-emoji (get-pixel-at image-data col row) emoji-color-grayed-palette)
+        (prn "missing mappping for " kind)))
+
+(defn convert-to-dom-element [image-data document mapping-kind & [font-size]]
   (let [font-size (or font-size 10)
         container (.createElement document "div")
         style (str "font-family: monospace; word-break:keep-all; font-size: " font-size "px")]
@@ -41,8 +179,7 @@
                            row-result ""]
                       (if (>= col (.-width image-data))
                         row-result
-                        (let [character (brightness-to-char dark-to-bright-array
-                                          (brightness-at image-data col row))]
+                        (let [character (pixel-to-character mapping-kind image-data col row)]
                           (recur (inc col) (str row-result character)))))]
                 (recur (inc row) (str result row-content "<br/>")))))]
 
@@ -62,7 +199,8 @@
      :font-size-in-px font-size-in-px}))
 
 (defn draw-frame []
-  (let [aspect-ratio (/ (.-videoHeight js/video) (.-videoWidth js/video))
+  (let [mapping-kind (:mapping-kind @local-state)
+        aspect-ratio (/ (.-videoHeight js/video) (.-videoWidth js/video))
         {:keys [width height font-size-in-px]} (dimensions
                                                  (.-offsetWidth js/content)
                                                  aspect-ratio
@@ -74,7 +212,7 @@
       (.drawImage context js/video 0 0 width height)
 
       (let [image-data (.getImageData context 0 0 width height)
-            ascii-dom-element (convert-to-dom-element image-data js/document dark-to-bright-emoji font-size-in-px)]
+            ascii-dom-element (convert-to-dom-element image-data js/document mapping-kind font-size-in-px )]
         (.replaceChildren js/content ascii-dom-element)))))
 
 ;; TODO replace js/variable with state atom
@@ -83,7 +221,6 @@
     (let [size (-> state :videomoji.views.main/view :size)
           running? (-> state :videomoji.views.main/view :video-paused? not)]
 
-      (prn "RENDER VIDEO " running?)
       (swap! local-state assoc :size size)
       (when-let [interval-id (@local-state :interval-id)]
         (js/clearInterval interval-id))
