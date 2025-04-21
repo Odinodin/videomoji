@@ -3,7 +3,7 @@
             [videomoji.utils :as u]))
 
 (defn button [{:keys [label on-click]}]
-  [:button {:class (css :bg-blue-500 :rounded :p-2 [:hover :bg-blue-300])
+  [:button {:class (css :border-2 :border-gray-400 :rounded :p-2 [:hover :border-gray-700 :bg-gray-200])
             :on {:click on-click}}
    label])
 
@@ -15,7 +15,7 @@
       [:li {:on {:click (u/interpolate on-select {:selected-value id})}
             :class (css
                      ["&:hover" :border-gray-500]
-                     ["&:has(input[type='radio']:checked)" :border-gray-700]
+                     ["&:has(input[type='radio']:checked)" :border-gray-700 :bg-gray-200]
                      {:width "40px" :height "40px"}
                      :items-center
                      :justify-center

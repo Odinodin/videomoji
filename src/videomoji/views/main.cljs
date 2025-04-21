@@ -36,16 +36,15 @@
                      :radio-name "size"
                      :values [{:id "small" :label "S" :checked (-> state ::view :size (= "small"))}
                               {:id "medium" :label "M" :checked (-> state ::view :size (= "medium"))}
-                              {:id "large" :label "L" :checked (-> state ::view :size (= "large"))}]})]
+                              {:id "large" :label "L" :checked (-> state ::view :size (= "large"))}]})
 
-          (c/radio {:label "Emoji:"
-                    :on-select [[:action/assoc-in [::view :emoji-kind] :selected-value]]
-                    :radio-name "emoji"
-                    :values [{:id :monochrome  :label "M" :checked (-> state ::view :emoji-kind (= :monochrome))}
-                             {:id :emoji-squares  :label "S" :checked (-> state ::view :emoji-kind (= :emoji-squares))}
-                             {:id :emoji-colored :label "C" :checked (-> state ::view :emoji-kind (= :emoji-colored))}
-                             {:id :emoji-colored-grayed :label "G" :checked (-> state ::view :emoji-kind (= :emoji-colored-grayed))}
-                             ]})]
+           (c/radio {:label "Emoji:"
+                     :on-select [[:action/assoc-in [::view :emoji-kind] :selected-value]]
+                     :radio-name "emoji"
+                     :values [{:id :monochrome :label "M" :checked (-> state ::view :emoji-kind (= :monochrome))}
+                              {:id :emoji-squares :label "S" :checked (-> state ::view :emoji-kind (= :emoji-squares))}
+                              {:id :emoji-colored :label "C" :checked (-> state ::view :emoji-kind (= :emoji-colored))}
+                              {:id :emoji-colored-grayed :label "G" :checked (-> state ::view :emoji-kind (= :emoji-colored-grayed))}]})]]
 
          [:div {:id "content"
                 :class (css {:flex "4 1 0"} :text-center :border-2 :rounded-3xl :p-4)}
