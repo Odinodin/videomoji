@@ -1,6 +1,6 @@
 (ns videomoji.video)
 
-(def local-state (atom {:mapping-kind :emoji-colored}))
+(def local-state (atom {:emoji-kind :emoji-colored}))
 
 (def dark-to-bright-emoji ["1F5A4", "1F977", "1F98D", "1F9BE", "1F993", "1F463", "1F47b", "1F480", "1F440", "1F9B4", "1F90D", "1F4AC", "1F5EF"])
 
@@ -163,7 +163,7 @@
         :emoji-colored-grayed (closest-emoji (get-pixel-at image-data col row) emoji-color-grayed-palette)
         (prn "missing mappping for " kind)))
 
-(defn convert-to-dom-element [image-data document mapping-kind & [font-size]]
+(defn convert-to-dom-element [image-data document emoji-kind & [font-size]]
   (let [font-size (or font-size 10)
         container (.createElement document "div")
         style (str "font-family: monospace; word-break:keep-all; font-size: " font-size "px")]
@@ -179,7 +179,7 @@
                            row-result ""]
                       (if (>= col (.-width image-data))
                         row-result
-                        (let [character (pixel-to-character mapping-kind image-data col row)]
+                        (let [character (pixel-to-character emoji-kind image-data col row)]
                           (recur (inc col) (str row-result character)))))]
                 (recur (inc row) (str result row-content "<br/>")))))]
 
@@ -199,7 +199,7 @@
      :font-size-in-px font-size-in-px}))
 
 (defn draw-frame []
-  (let [mapping-kind (:mapping-kind @local-state)
+  (let [emoji-kind (:emoji-kind @local-state)
         aspect-ratio (/ (.-videoHeight js/video) (.-videoWidth js/video))
         {:keys [width height font-size-in-px]} (dimensions
                                                  (.-offsetWidth js/content)
@@ -212,15 +212,17 @@
       (.drawImage context js/video 0 0 width height)
 
       (let [image-data (.getImageData context 0 0 width height)
-            ascii-dom-element (convert-to-dom-element image-data js/document mapping-kind font-size-in-px )]
+            ascii-dom-element (convert-to-dom-element image-data js/document emoji-kind font-size-in-px )]
         (.replaceChildren js/content ascii-dom-element)))))
 
 ;; TODO replace js/variable with state atom
 (defn render-video [state]
   (when (-> state :videomoji.views.main/view :video-started)
     (let [size (-> state :videomoji.views.main/view :size)
+          emoji-kind (-> state :videomoji.views.main/view :emoji-kind)
           running? (-> state :videomoji.views.main/view :video-paused? not)]
 
+      (swap! local-state assoc :emoji-kind emoji-kind)
       (swap! local-state assoc :size size)
       (when-let [interval-id (@local-state :interval-id)]
         (js/clearInterval interval-id))
