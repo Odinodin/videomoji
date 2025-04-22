@@ -4,4 +4,8 @@
         com.thheller/shadow-css {:mvn/version "0.6.1"}
         thheller/shadow-cljs {:mvn/version "2.28.22"}}
  :aliases
- {:dev {:extra-paths ["dev" "test"]}}}
+ {:dev {:extra-paths ["dev" "test"]}
+  :outdated {;; Note that it is `:deps`, not `:extra-deps`
+             :deps {com.github.liquidz/antq {:mvn/version "RELEASE"}}
+             :main-opts ["-m" "antq.core"]}
+  }}
