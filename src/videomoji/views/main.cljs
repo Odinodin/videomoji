@@ -18,10 +18,11 @@
       [:header]
       [:main {:class (css :flex-1)}
        [:div
+        [:canvas ]
         [:video {:playsinline true :muted true :style {:position "sticky" :top "10px" :display "none"}}]
-        [:div {:class (css :flex :flex-row)}
+        [:div {:class (css :flex :flex-col)}
          [:div {:class (css {:flex "1 1 auto"})}
-          [:div {:class (css :flex :flex-col {:gap "20px"})}
+          [:div {:class (css :flex :flex-row {:gap "20px"})}
 
            ;; Logo
            [:div {:class (css :p-8 :flex :flex-col {:gap "10px"})}

@@ -1,8 +1,53 @@
-(ns videomoji.video)
+(ns videomoji.video
+  (:require
+    ["@mediapipe/tasks-vision" :as mp-vision]
+    [shadow.cljs.modern :refer (js-await)]))
 
 (def local-state (atom {:emoji-kind :emoji-colored}))
 
 (def dark-to-bright-emoji ["1F5A4", "1F977", "1F98D", "1F9BE", "1F993", "1F463", "1F47b", "1F480", "1F440", "1F9B4", "1F90D", "1F4AC", "1F5EF"])
+
+
+(defonce imageSegmenter (atom nil))
+(defonce labels (atom nil))
+
+(defn create-image-segmenter
+  "Initializes the MediaPipe ImageSegmenter."
+  []
+  (try
+    (js-await [fileset-resolver (.forVisionTasks mp-vision/FilesetResolver "/wasm")] ;; wasm-dir copied from @mediapipe node_modules
+      (let [;; Define the options for the ImageSegmenter using a JS object literal
+            segmenter-options #js {:baseOptions #js {:modelAssetPath "/selfie_segmenter_landscape.tflite"
+                                                     :delegate "GPU"}
+                                   :runningMode "IMAGE"
+                                   :outputCategoryMask true
+                                   :outputConfidenceMasks false}
+
+            _ (prn "OPTS " (js->clj segmenter-options))
+
+            ;; Create the segmenter instance
+            segmenter (js-await (.createFromOptions mp-vision/ImageSegmenter
+                                  fileset-resolver
+                                  segmenter-options))]
+        (js-await [segmenter (.createFromOptions mp-vision/ImageSegmenter
+                               fileset-resolver
+                               segmenter-options)]
+
+          ;; --- Update State and UI ---
+          ;; Store the created segmenter and labels in atoms
+          (reset! imageSegmenter segmenter)
+          (reset! labels (.getLabels segmenter))            ; Call instance method
+
+          true)))
+
+    ;; --- Error Handling ---
+    (catch js/Error e
+      (js/console.error "Failed to create Image Segmenter:" e)
+      ;; Indicate failure (optional)
+      false)))
+
+(create-image-segmenter)
+
 
 (def emoji-color-grayed-palette
     [;; 🖤 Blacks & dark grays
@@ -120,6 +165,7 @@
    {:emoji "🟦" :rgb [0 0 255]}
    {:emoji "🟪" :rgb [128 0 128]}
    {:emoji "⬛" :rgb [0 0 0]}
+   {:emoji "🟨" :rgb [254 254 254]}
    {:emoji "⬜" :rgb [255 255 255]}
    {:emoji "🟫" :rgb [165 42 42]}])
 
@@ -190,7 +236,7 @@
   (let [font-size-in-px (get {"small" 12
                               "medium" 14
                               "large" 20} size)
-        adjustment (get {"small" 0.8
+        adjustment (get {"small" 0.9
                          "medium" 0.8
                          "large" 0.8} size)
         width (Math/ceil (* adjustment (/ content-width font-size-in-px)))]
@@ -198,22 +244,79 @@
      :height (Math/ceil (* aspect-ratio width))
      :font-size-in-px font-size-in-px}))
 
-(defn draw-frame []
-  (let [emoji-kind (:emoji-kind @local-state)
+(defn image-callback [result]
+  (let [context js/the-context
+        emoji-kind (:emoji-kind @local-state)
         aspect-ratio (/ (.-videoHeight js/video) (.-videoWidth js/video))
         {:keys [width height font-size-in-px]} (dimensions
                                                  (.-offsetWidth js/content)
                                                  aspect-ratio
-                                                 (or (:size @local-state) "small")
-                                                 )]
+                                                 (or (:size @local-state) "small")                                                 )
 
-    (let [canvas (.createElement js/document "canvas")
-          context (.getContext canvas "2d")]
+        original-data (.getImageData context 0 0 width height)
+        ^js image-data (.-data original-data)
+
+        ;; --- 2. Get Mask Data ---
+        ;; Access the category mask and get it as a Float32Array
+        ^js mask (-> result .-categoryMask (.getAsUint8Array))
+
+        mask-length (.-length mask)
+        ]
+
+
+
+    (loop [i 0   ; Index for mask array
+           j 0]  ; Index for image-data array (steps by 4)
+      (when (< i mask-length) ; Loop while mask index is in bounds
+        (when (not= (aget mask i) 0)
+          (let [;; Get legend RGBA values
+                leg-r 255 #_(aget legend-color 0)
+                leg-g 255 #_(aget legend-color 1)
+                leg-b 255 #_(aget legend-color 2)
+                leg-a 255 #_(aget legend-color 3)]
+
+            ;; Clear out the pixel
+            (aset image-data j leg-r)
+            (aset image-data (+ j 1) leg-g)
+            (aset image-data (+ j 2) leg-b)
+            (aset image-data (+ j 3) leg-a)
+            ))
+
+        ;; Move to the next mask value and the next pixel (4 steps in image-data)
+        (recur (inc i) (+ j 4))))
+
+    (let [clamped (js/Uint8ClampedArray. (.-buffer image-data))
+          data-new (js/ImageData. clamped width height)
+          ascii-dom-element (convert-to-dom-element data-new js/document emoji-kind font-size-in-px )]
+      (.putImageData context data-new 0 0)
+      (.replaceChildren js/content ascii-dom-element))
+
+
+
+    #_(let [data-new (js/ImageData. image-data width height)
+          ascii-dom-element (convert-to-dom-element data-new js/document emoji-kind font-size-in-px)]
+      (.replaceChildren js/content ascii-dom-element))
+
+      )
+
+  )
+
+(defn draw-frame []
+  (let [aspect-ratio (/ (.-videoHeight js/video) (.-videoWidth js/video))
+        {:keys [width height font-size-in-px]} (dimensions
+                                                 (.-offsetWidth js/content)
+                                                 aspect-ratio
+                                                 (or (:size @local-state) "small"))]
+
+    (let [canvas (.querySelector js/document "canvas")
+          context (.getContext canvas "2d" (clj->js {"willReadFrequently" true}))]
+
+      (set! (.-width canvas) width)
+      (set! (.-height canvas) height)
+
       (.drawImage context js/video 0 0 width height)
-
-      (let [image-data (.getImageData context 0 0 width height)
-            ascii-dom-element (convert-to-dom-element image-data js/document emoji-kind font-size-in-px )]
-        (.replaceChildren js/content ascii-dom-element)))))
+      (set! js/the-context context)
+      (.segment @imageSegmenter canvas image-callback))))
 
 ;; TODO replace js/variable with state atom
 (defn render-video [state]
@@ -242,7 +345,7 @@
           (.addEventListener
             js/video
             "canplay"
-            (fn [ev] (swap! local-state assoc :interval-id (js/setInterval draw-frame 200)))
+            (fn [ev] (swap! local-state assoc :interval-id (js/setInterval draw-frame 100)))
             #js {:once true})
 
           (-> (.-mediaDevices js/navigator)
