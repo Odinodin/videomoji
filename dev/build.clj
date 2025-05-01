@@ -9,9 +9,11 @@
             (cb/index-path (io/file "src") {})
             (assoc-in [:aliases :gap-2] {:gap "2px"})
             (assoc-in [:aliases :gap-4] {:gap "4px"})
+            (assoc-in [:aliases :gap-6] {:gap "6px"})
             (cb/generate
               '{:styles
-                {:entries [videomoji.core]}})
+                {:entries [videomoji.core
+                           videomoji]}})
             (cb/minify)
             (cb/write-outputs-to (io/file "resources" "public")))]
 

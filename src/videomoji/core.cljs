@@ -1,4 +1,6 @@
 (ns videomoji.core
+  {:dev/always true
+   :shadow.css/include ["videomoji/pally.css"]}
   (:require [replicant.dom :as r]
             [videomoji.video :as video]
             [videomoji.views.main :as main]))
@@ -11,10 +13,9 @@
 
 (defn render-ui [state]
   (let [current-view (get-current-view state)]
-    [:div
-     (case current-view
-           :main
-           (main/view state))]))
+    (case current-view
+          :main
+          (main/view state))))
 
 (defn process-effect [store [effect & args]]
   (case effect
