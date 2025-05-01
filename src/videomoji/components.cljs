@@ -3,14 +3,14 @@
             [videomoji.utils :as u]))
 
 (defn button [{:keys [label on-click]}]
-  [:button {:class (css :border-2 :border-gray-400 :rounded :p-2 [:hover :border-gray-700 :bg-gray-200])
+  [:button {:class (css :text-left :w-full :border-2 :border-gray-400 :rounded :p-2 [:hover :border-gray-700 :bg-gray-200])
             :on {:click on-click}}
    label])
 
 (defn radio [{:keys [label radio-name on-select values]}]
   [:div
    [:div label]
-   [:ul {:class (css :flex :gap-2)}
+   [:ul {:class (css :flex :gap-6)}
     (for [{:keys [id label checked]} values]
       [:li {:on {:click (u/interpolate on-select {:selected-value id})}
             :class (css

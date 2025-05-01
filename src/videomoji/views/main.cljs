@@ -13,42 +13,46 @@
   (let [started (-> state ::view :video-started)
         video-paused? (-> state ::view :video-paused?)]
 
-    [:div {:class (css :max-w-6xl :m-auto :p-4)}
-     [:div {:class (css :flex :flex-col)}
-      [:header]
-      [:main {:class (css :flex-1)}
-       [:div
-        [:canvas ]
-        [:video {:playsinline true :muted true :style {:position "sticky" :top "10px" :display "none"}}]
-        [:div {:class (css :flex :flex-col)}
-         [:div {:class (css {:flex "1 1 auto"})}
-          [:div {:class (css :flex :flex-row {:gap "20px"})}
+    [:div {:class (css {:max-width "1200px"} :m-auto :p-4 {:font-family "Pally-Variable" :font-weight "500"})}
 
-           ;; Logo
-           [:div {:class (css :p-8 :flex :flex-col {:gap "10px"})}
-            [:h1 {:class (css :text-5xl :flex :justify-center)} "\uD83C\uDFA5️Videomoji 🎥"]
-            [:h3 {:class (css :text-2xl :flex :justify-center)} "\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25"]]
+     [:div {:class (css :flex :flex-row :gap-6)}
 
-           [:div {}
-            (c/button {:label (if video-paused? "Play" "Pause") :on-click [[:action/assoc-in [::view :video-paused?] (not video-paused?)]]})]
+      ;; Menu
+      [:div {:class (css :pt-10 :pr-10 {:flex "1 1 200px"})}
+       [:div {:class (css :flex :flex-col {:gap "20px"})}
 
-           (c/radio {:label "Size:"
-                     :on-select [[:action/assoc-in [::view :size] :selected-value]]
-                     :radio-name "size"
-                     :values [{:id "small" :label "S" :checked (-> state ::view :size (= "small"))}
-                              {:id "medium" :label "M" :checked (-> state ::view :size (= "medium"))}
-                              {:id "large" :label "L" :checked (-> state ::view :size (= "large"))}]})
+        ;; Logo
+        [:div {:class (css :flex :flex-col :gap-4 :mb-8)}
+         [:h1 {:class (css :text-5xl)} "Videomoji"]
+         [:h3 {:class (css :text-2xl)} "\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25"]]
 
-           (c/radio {:label "Emoji:"
-                     :on-select [[:action/assoc-in [::view :emoji-kind] :selected-value]]
-                     :radio-name "emoji"
-                     :values [{:id :monochrome :label "M" :checked (-> state ::view :emoji-kind (= :monochrome))}
-                              {:id :emoji-squares :label "S" :checked (-> state ::view :emoji-kind (= :emoji-squares))}
-                              {:id :emoji-colored :label "C" :checked (-> state ::view :emoji-kind (= :emoji-colored))}
-                              {:id :emoji-colored-grayed :label "G" :checked (-> state ::view :emoji-kind (= :emoji-colored-grayed))}]})]]
+        [:div {:class (css {:width "100px"})}
+         (c/button {:label (if video-paused? "▶️ Play" "⏸️ Pause")
+                    :on-click [[:action/assoc-in [::view :video-paused?] (not video-paused?)]]})]
 
-         [:div {:id "content"
-                :class (css {:flex "4 1 0"} :text-center :border-2 :rounded-3xl :p-4)}
-          (when (not started)
-            [:div {:class (css :flex :justify-center :items-center :h-full)}
-             (c/button {:label "Start the video" :on-click [[:action/assoc-in [::view :video-started] true]]})])]]]]]]))
+        (c/radio {:label "Size:"
+                  :on-select [[:action/assoc-in [::view :size] :selected-value]]
+                  :radio-name "size"
+                  :values [{:id "small" :label "S" :checked (-> state ::view :size (= "small"))}
+                           {:id "medium" :label "M" :checked (-> state ::view :size (= "medium"))}
+                           {:id "large" :label "L" :checked (-> state ::view :size (= "large"))}]})
+
+        (c/radio {:label "Style:"
+                  :on-select [[:action/assoc-in [::view :emoji-kind] :selected-value]]
+                  :radio-name "emoji"
+                  :values [{:id :monochrome :label "☠️" :checked (-> state ::view :emoji-kind (= :monochrome))}
+                           {:id :emoji-squares :label "🟩" :checked (-> state ::view :emoji-kind (= :emoji-squares))}
+                           {:id :emoji-colored :label "🌸" :checked (-> state ::view :emoji-kind (= :emoji-colored))}
+                           {:id :emoji-colored-grayed :label "🥖" :checked (-> state ::view :emoji-kind (= :emoji-colored-grayed))}]})]]
+
+      ;; Video
+      [:div {:class (css {:flex "5 1 auto"} :p-4 :relative)}
+       [:div {:class (css :absolute :top-4 {:display "none"})}
+        [:canvas]
+        [:video {:playsinline true :muted true :style {:position "sticky" :top "10px" :display "none"}}]]
+
+       [:div {:id "content"}
+        (when (not started)
+          [:div {:class (css :flex :justify-center :items-center :h-full)}
+           (c/button {:label "Start the video" :on-click [[:action/assoc-in [::view :video-started] true]]})])]]
+      ]]))
