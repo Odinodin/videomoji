@@ -14,11 +14,21 @@
         video-paused? (-> state ::view :video-paused?)]
 
     [:div {:class (css {:max-width "1200px"} :m-auto :p-4 {:font-family "Pally-Variable" :font-weight "500"})}
-
      [:div {:class (css :flex :flex-row :gap-6)}
 
+      ;; Video
+      [:div {:class (css {:flex "5 1 auto"} :p-4 :relative)}
+       [:div {:class (css :absolute :top-4 {:display "none"})}
+        [:canvas]
+        [:video {:playsinline true :muted true :style {:position "sticky" :top "10px" :display "none"}}]]
+
+       [:div {:id "content"}
+        (when (not started)
+          [:div {:class (css :flex :justify-center :items-center :h-full)}
+           (c/button {:label "Start the video" :on-click [[:action/assoc-in [::view :video-started] true]]})])]]
+
       ;; Menu
-      [:div {:class (css :pt-10 :pr-10 {:flex "1 1 200px"})}
+      [:div {:class (css :pt-10 {:flex "1 1 200px"})}
        [:div {:class (css :flex :flex-col {:gap "20px"})}
 
         ;; Logo
@@ -44,15 +54,4 @@
                            {:id :emoji-squares :label "🟩" :checked (-> state ::view :emoji-kind (= :emoji-squares))}
                            {:id :emoji-colored :label "🌸" :checked (-> state ::view :emoji-kind (= :emoji-colored))}
                            {:id :emoji-colored-grayed :label "🥖" :checked (-> state ::view :emoji-kind (= :emoji-colored-grayed))}]})]]
-
-      ;; Video
-      [:div {:class (css {:flex "5 1 auto"} :p-4 :relative)}
-       [:div {:class (css :absolute :top-4 {:display "none"})}
-        [:canvas]
-        [:video {:playsinline true :muted true :style {:position "sticky" :top "10px" :display "none"}}]]
-
-       [:div {:id "content"}
-        (when (not started)
-          [:div {:class (css :flex :justify-center :items-center :h-full)}
-           (c/button {:label "Start the video" :on-click [[:action/assoc-in [::view :video-started] true]]})])]]
       ]]))

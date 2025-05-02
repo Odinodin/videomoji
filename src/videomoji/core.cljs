@@ -1,6 +1,6 @@
 (ns videomoji.core
   {:dev/always true
-   :shadow.css/include ["videomoji/pally.css"]}
+   :shadow.css/include ["videomoji/main.css"]}
   (:require [replicant.dom :as r]
             [videomoji.video :as video]
             [videomoji.views.main :as main]))
