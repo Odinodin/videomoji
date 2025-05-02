@@ -3,7 +3,7 @@
             [videomoji.utils :as u]))
 
 (defn button [{:keys [label on-click]}]
-  [:button {:class (css :text-left :w-full :border-2 :border-gray-400 :rounded :p-2 [:hover :border-gray-700 :bg-gray-200])
+  [:button {:class (css {:background "white"} :text-left :border-2 :border-gray-400 :rounded :p-2 [:hover :border-gray-700 :bg-gray-200])
             :on {:click on-click}}
    label])
 
@@ -22,3 +22,6 @@
                      :rounded :border-2 :flex :p-2 :cursor-pointer :border-gray-400)}
        [:input {:type "radio" :id id :value id :name radio-name :checked checked :class (css {:opacity 0 :position "absolute" :pointer-events "none"})}]
        [:label {:for id :class (css {:pointer-events "none"})} label]])]])
+
+(defn emoji-wall [amount character]
+  [:div (take amount (repeat character))])

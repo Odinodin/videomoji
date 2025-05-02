@@ -14,21 +14,24 @@
         video-paused? (-> state ::view :video-paused?)]
 
     [:div {:class (css {:max-width "1200px"} :m-auto :p-4 {:font-family "Pally-Variable" :font-weight "500"})}
-     [:div {:class (css :flex :flex-row :gap-6)}
+     [:div {:class (css :flex :flex-row {:gap "20px"}) }
 
       ;; Video
-      [:div {:class (css {:flex "5 1 auto"} :p-4 :relative)}
+      [:div {:class (css {:flex "5 1 auto"} :relative)}
        [:div {:class (css :absolute :top-4 {:display "none"})}
         [:canvas]
         [:video {:playsinline true :muted true :style {:position "sticky" :top "10px" :display "none"}}]]
 
-       [:div {:id "content"}
+       [:div {:id "content" :class (css :h-full :relative)}
         (when (not started)
-          [:div {:class (css :flex :justify-center :items-center :h-full)}
-           (c/button {:label "Start the video" :on-click [[:action/assoc-in [::view :video-started] true]]})])]]
+          [:div {:class (css :h-full :relative)}
+           [:div {:class (css :absolute :overflow-hidden :top-0 :left-0 :right-0 :h-full )}
+            (c/emoji-wall 1000 "✋")]
+           [:div {:class (css :relative :flex :justify-center :items-center :h-full)}
+            (c/button {:label "Start the video" :on-click [[:action/assoc-in [::view :video-started] true]]})]])]]
 
       ;; Menu
-      [:div {:class (css :pt-10 {:flex "1 1 200px"})}
+      [:div {:class (css :py-10 {:flex "1 1 200px"})}
        [:div {:class (css :flex :flex-col {:gap "20px"})}
 
         ;; Logo
