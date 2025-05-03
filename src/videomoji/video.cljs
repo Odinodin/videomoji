@@ -122,7 +122,7 @@
 
 ;; TODO replace js/variable with state atom
 (defn render-video [state]
-  (when (-> state :videomoji.views.main/view :video-started)
+  (when (-> state :videomoji.views.main/view :video-initialized?)
     (let [size (-> state :videomoji.views.main/view :size)
           emoji-kind (-> state :videomoji.views.main/view :emoji-kind)
           running? (-> state :videomoji.views.main/view :video-paused? not)]

@@ -7,6 +7,11 @@
             :on {:click on-click}}
    label])
 
+(defn logo [label]
+  [:div {:class (css :flex :flex-col :gap-4 :mb-8)}
+   [:h1 {:class (css :text-5xl)} label]
+   [:h3 {:class (css :text-2xl)} "\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25"]])
+
 (defn radio [{:keys [label radio-name on-select values]}]
   [:div
    [:div label]
