@@ -134,3 +134,52 @@
    {:emoji "🟨" :rgb [254 254 254]}
    {:emoji "⬜" :rgb [255 255 255]}
    {:emoji "🟫" :rgb [155 15 15]}])
+
+(defn get-pixel-at [image-data x y]
+  (let [red-idx (+ (* y (* (.-width image-data) 4)) (* x 4))]
+    {:red (aget (.-data image-data) red-idx)
+     :green (aget (.-data image-data) (+ red-idx 1))
+     :blue (aget (.-data image-data) (+ red-idx 2))
+     :alpha (aget (.-data image-data) (+ red-idx 3))}))
+
+(defn color-distance [[r1 g1 b1] [r2 g2 b2]]
+  (Math/sqrt
+    (+ (Math/pow (- r1 r2) 2)
+       (Math/pow (- g1 g2) 2)
+       (Math/pow (- b1 b2) 2))))
+
+(defn closest-emoji [{:keys [red green blue _alpha]} emoji-palette]
+  (let [input-color [red green blue]]
+    (:emoji
+      (apply min-key #(color-distance input-color (:rgb %)) emoji-palette))))
+
+(defn pixel-to-character [kind image-data col row]
+  (case kind
+        :monochrome (closest-emoji (get-pixel-at image-data col row) monochrome-palette)
+        :emoji-squares (closest-emoji (get-pixel-at image-data col row) square-palette)
+        :emoji-colored (closest-emoji (get-pixel-at image-data col row) colored-palette)
+        :emoji-colored-grayed (closest-emoji (get-pixel-at image-data col row) color-grayed-palette)
+    (prn "missing mappping for " kind)))
+
+(defn convert-to-dom-element [image-data document emoji-kind & [font-size]]
+  (let [font-size (or font-size 10)
+        container (.createElement document "div")
+        style (str "font-family: monospace; word-break:keep-all; line-height: 1; font-size: " font-size "px")]
+    (set! (.-style container) style)
+
+    (let [content
+          (loop [row 0
+                 result ""]
+            (if (>= row (.-height image-data))
+              result
+              (let [row-content
+                    (loop [col 0
+                           row-result ""]
+                      (if (>= col (.-width image-data))
+                        row-result
+                        (let [character (pixel-to-character emoji-kind image-data col row)]
+                          (recur (inc col) (str row-result character)))))]
+                (recur (inc row) (str result row-content "<br/>")))))]
+
+      (set! (.-innerHTML container) content)
+      container)))
