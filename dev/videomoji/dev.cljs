@@ -1,12 +1,9 @@
 (ns videomoji.dev
   (:require [videomoji.core :as videomoji]))
 
-(defonce store (atom {:number 0}))
+(defonce store (atom {}))
+(defonce el (js/document.getElementById "app"))
 
-(defn main []
-  (videomoji/init store)
-  (println "Loaded!"))
-
-(defn ^:dev/after-load reload []
-  (videomoji/init store)
-  (println "Reloaded!!"))
+(defn ^:dev/after-load main []
+  ;; Add additional dev-time tooling here
+  (videomoji/main store el))

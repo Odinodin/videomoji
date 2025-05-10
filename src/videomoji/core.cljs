@@ -1,50 +1,80 @@
 (ns videomoji.core
   {:dev/always true
    :shadow.css/include ["videomoji/main.css"]}
-  (:require [replicant.dom :as r]
-            [videomoji.video :as video]
-            [videomoji.views.main :as main]))
+  (:require [clojure.walk :as walk]
+            [replicant.dom :as r]
+            [replicant.alias :as alias]
+            [videomoji.router :as router]
+            [videomoji.ui :as ui]
+            [videomoji.video :as video]))
 
-(def views
-  [{:id :main}])
+(defn routing-anchor [attrs children]
+  (let [routes (-> attrs :replicant/alias-data :routes)]
+    (into [:a (cond-> attrs
+                      (:ui/location attrs)
+                      (assoc :href (router/location->url routes
+                                     (:ui/location attrs))))]
+      children)))
 
-(defn get-current-view [state]
-  (:current-view state :main))
+(alias/register! :ui/a routing-anchor)
 
-(defn render-ui [state]
-  (let [current-view (get-current-view state)]
-    (case current-view
-          :main
-          (main/view state))))
+(defn find-target-href [e]
+  (some-> e .-target
+          (.closest "a")
+          (.getAttribute "href")))
 
-(defn process-effect [store [effect & args]]
-  (case effect
-        :effect/assoc-in
-        (apply swap! store assoc-in args)))
+(defn get-current-location []
+  (->> js/location.href
+       (router/url->location router/routes)))
 
-(defn perform-actions [state event-data]
-  (mapcat
-    (fn [action]
-      (prn "Action: " (first action) (rest action))
-      (or (main/perform-action state action)
-          (case (first action)
-                :action/assoc-in
-                [(into [:effect/assoc-in] (rest action))]
+(defn interpolate-actions [event actions]
+  (walk/postwalk
+    (fn [x]
+      (case x
+            :event/target.value (.. event -target -value)
+            ;; Add more cases as needed
+            x))
+    actions))
 
-                (prn "Unknown action"))))
-    event-data))
+(defn execute-actions [store actions]
+  (prn "ACTIONS " actions)
+  (doseq [[action & args] actions]
+    (case action
+          :store/assoc-in (apply swap! store assoc-in args)
+          (println "Unknown action" action "with arguments" args))))
 
-(defn init [store]
-  (add-watch store ::render (fn [_ _ _ new-state]
-                              ;; TODO consider using an effect to update video-state
-                              (video/render-video new-state)
-                              (r/render
-                                js/document.body
-                                (render-ui new-state))))
+(defn route-click [e store routes]
+  (let [href (find-target-href e)]
+    (when-let [location (router/url->location routes href)]
+      (.preventDefault e)
+      (if (router/essentially-same? location (:location @store))
+        (.replaceState js/history nil "" href)
+        (.pushState js/history nil "" href))
+      (swap! store assoc :location location))))
+
+(defn main [store el]
+  (add-watch
+    store ::render
+    (fn [_ _ _ state]
+      (r/render el (ui/render-page state) {:alias-data {:routes router/routes}})))
 
   (r/set-dispatch!
-    (fn [_ event-data]
-      (->> (perform-actions @store event-data)
-           (run! #(process-effect store %)))))
+    (fn [event-data actions]
+      (->> actions
+           (interpolate-actions
+             (:replicant/dom-event event-data))
+           (execute-actions store))))
 
-  (swap! store assoc ::loaded-at (.getTime (js/Date.))))
+  (js/document.body.addEventListener
+    "click"
+    #(route-click % store router/routes))
+
+  (js/window.addEventListener
+    "popstate"
+    (fn [_] (swap! store assoc :location (get-current-location))))
+
+  ;; Trigger the initial render
+
+  (swap! store assoc
+    :app/started-at (js/Date.)
+    :location (get-current-location)))
