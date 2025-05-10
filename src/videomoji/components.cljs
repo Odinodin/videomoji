@@ -8,9 +8,8 @@
    label])
 
 (defn logo [label]
-  [:div {:class (css :flex :flex-col :gap-4 :mb-8)}
-   [:h1 {:class (css :text-5xl)} label]
-   [:h3 {:class (css :text-2xl)} "\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25\uD83D\uDD25"]])
+  [:div
+   [:h1 {:class (css :text-5xl)} label]])
 
 (defn radio [{:keys [label radio-name on-select values]}]
   [:div
@@ -30,3 +29,12 @@
 
 (defn emoji-wall [amount character]
   [:div (take amount (repeat character))])
+
+(defn layout-page-with-header [content]
+  [:div {:class (css {:max-width "2000px"} :m-auto :px-4 {:font-family "Pally-Variable" :font-weight "500"})}
+   [:header {:class (css :py-4 :pl-4 :flex :gap-10 :items-center)}
+    [:ui/a {:ui/location {:location/page-id :pages/frontpage} :class (css {:margin-right "20px"})}
+     (logo "🎥 Videomoji")]
+    [:ui/a {:ui/location {:location/page-id :pages/about}} "About"]
+    [:ui/a {:ui/location {:location/page-id :pages/tech}} "Tech"]]
+   content])
