@@ -16,6 +16,8 @@
 
        ;; Video
        [:div {:class (css {:flex "5 1 0"} :relative)}
+        ;; Necessary elements for reading the webcam and for rendering video bitmaps off screen
+        ;; Note they are not visible to the user
         [:div {:class (css :absolute :top-4 :left-0 :z-40 {:display "none"})}
          [:canvas]
          [:video {:playsinline true :muted true :style {:position "sticky" :top "10px" :display "none"}}]]

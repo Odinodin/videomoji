@@ -56,6 +56,8 @@
   (add-watch
     store ::render
     (fn [_ _ _ state]
+      (video/render-video state)
+      (prn "Rendering")
       (r/render el (ui/render-page state) {:alias-data {:routes router/routes}})))
 
   (r/set-dispatch!
