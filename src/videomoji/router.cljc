@@ -24,7 +24,6 @@
                 (seq hash-params) (assoc :location/hash-params hash-params))))))
 
 (defn ^{:indent 1} location->url [routes {:location/keys [page-id params query-params hash-params]}]
-  (prn "routes " (js-keys routes) [page-id params query-params hash-params])
   (cond-> (silk/depart routes page-id params)
           (seq query-params)
           (str "?" (uri/map->query-string query-params))

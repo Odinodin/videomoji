@@ -4,7 +4,8 @@
     [videomoji.emoji :as emoji]
     [shadow.cljs.modern :refer (js-await)]))
 
-(def local-state (atom {:emoji-kind :emoji-colored}))
+(def local-state (atom {:emoji-kind :emoji-colored
+                        :running? true}))
 
 (defonce imageSegmenter (atom nil))
 
@@ -89,54 +90,63 @@
       (.replaceChildren js/content ascii-dom-element))))
 
 (defn draw-frame []
-  (let [aspect-ratio (/ (.-videoHeight js/video) (.-videoWidth js/video))
-        {:keys [width height font-size-in-px]} (dimensions
-                                                 (.-offsetWidth js/content)
-                                                 aspect-ratio
-                                                 (or (:size @local-state) "small"))]
+  (when (and (:running? @local-state)
+             (exists? js/content)
+             (not (nil? js/content))
+             (exists? js/video)
+             (not (nil? js/video)))
 
-    (let [canvas (.querySelector js/document "canvas")
-          context (.getContext canvas "2d" (clj->js {"willReadFrequently" true}))]
+    (let [aspect-ratio (/ (.-videoHeight js/video) (.-videoWidth js/video))
+          {:keys [width height font-size-in-px]} (dimensions
+                                                   (.-offsetWidth js/content)
+                                                   aspect-ratio
+                                                   (or (:size @local-state) "small"))]
 
-      (set! (.-width canvas) width)
-      (set! (.-height canvas) height)
+      (let [canvas (.querySelector js/document "canvas")
+            context (.getContext canvas "2d" (clj->js {"willReadFrequently" true}))]
 
-      (.drawImage context js/video 0 0 width height)
-      (set! js/the-context context)
-      (.segment @imageSegmenter canvas image-callback))))
+        (set! (.-width canvas) width)
+        (set! (.-height canvas) height)
 
-;; TODO replace js/variable with state atom
-(defn render-video [state]
-  (when (-> state :videomoji.pages.main/view :video-initialized?)
-    (let [size (-> state :videomoji.pages.main/view :size)
-          emoji-kind (-> state :videomoji.pages.main/view :emoji-kind)
-          running? (-> state :videomoji.pages.main/view :video-paused? not)]
+        (.drawImage context js/video 0 0 width height)
+        (set! js/the-context context)
+        (.segment @imageSegmenter canvas image-callback)))))
 
-      (swap! local-state assoc :emoji-kind emoji-kind)
-      (swap! local-state assoc :size size)
-      (when-let [interval-id (@local-state :interval-id)]
-        (js/clearInterval interval-id))
+(defn update-state [state]
+  (let [size (-> state :videomoji.pages.main/view :size)
+        emoji-kind (-> state :videomoji.pages.main/view :emoji-kind)
+        running? (-> state :videomoji.pages.main/view :video-paused? not)]
+    (swap! local-state assoc
+      :running? running?
+      :size size
+      :emoji-kind emoji-kind)))
 
-      (when running?
-        ;; Video element
-        (set! js/video (.querySelector js/document "video"))
+(defn initialize [state]
+  (update-state state)
 
-        (letfn [(handle-success [stream]
-                  (set! (.-srcObject js/video) stream)
-                  (.play js/video)
-                  (set! js/content (.getElementById js/document "content")))
+  (when-let [interval-id (@local-state :interval-id)]
+    (js/clearInterval interval-id))
 
-                (handle-error [error]
-                  (.log js/console "Error for getUserMedia: " (.-message error) (.-name error)))]
+  (set! js/video (.querySelector js/document "video"))
 
-          (.addEventListener
-            js/video
-            "canplay"
-            (fn [ev] (swap! local-state assoc :interval-id (js/setInterval draw-frame 50)))
-            #js {:once true})
+  (when (and (exists? js/video)
+             (not (nil? js/video)))
+    (letfn [(handle-success [stream]
+              (set! (.-srcObject js/video) stream)
+              (.play js/video)
+              (set! js/content (.getElementById js/document "content")))
 
-          (-> (.-mediaDevices js/navigator)
-              (.getUserMedia #js {:audio false
-                                  :video true})
-              (.then handle-success)
-              (.catch handle-error)))))))
+            (handle-error [error]
+              (.log js/console "Error for getUserMedia: " (.-message error) (.-name error)))]
+
+      (.addEventListener
+        js/video
+        "canplay"
+        (fn [ev] (swap! local-state assoc :interval-id (js/setInterval draw-frame 50)))
+        #js {:once true})
+
+      (-> (.-mediaDevices js/navigator)
+          (.getUserMedia #js {:audio false
+                              :video true})
+          (.then handle-success)
+          (.catch handle-error)))))

@@ -4,6 +4,7 @@
   (:require [clojure.walk :as walk]
             [replicant.dom :as r]
             [replicant.alias :as alias]
+            [videomoji.pages.main :as main]
             [videomoji.router :as router]
             [videomoji.ui :as ui]
             [videomoji.video :as video]))
@@ -27,21 +28,41 @@
   (->> js/location.href
        (router/url->location router/routes)))
 
-(defn interpolate-actions [event actions]
+(defn interpolate [event data]
   (walk/postwalk
     (fn [x]
       (case x
-            :event/target.value (.. event -target -value)
-            ;; Add more cases as needed
-            x))
-    actions))
+            :event.target/value-as-number
+            (some-> event .-target .-valueAsNumber)
 
-(defn execute-actions [store actions]
-  (prn "ACTIONS " actions)
-  (doseq [[action & args] actions]
-    (case action
-          :store/assoc-in (apply swap! store assoc-in args)
-          (println "Unknown action" action "with arguments" args))))
+            :event.target/value-as-keyword
+            (some-> event .-target .-value keyword)
+
+            :event.target/value
+            (some-> event .-target .-value)
+
+            x))
+    data))
+
+(defn process-effect [store [effect & args]]
+  (case effect
+        :effect/assoc-in
+        (apply swap! store assoc-in args)
+        ::main/update-video
+        (video/update-state @store)))
+
+(defn perform-actions [state event-data]
+  (mapcat
+    (fn [action]
+      (prn (first action) (rest action))
+      (or #_(main/perform-action state action)
+          (case (first action)
+                :action/assoc-in
+                [(into [:effect/assoc-in] (rest action))]
+                ::main/update-video
+                [action]
+                (prn "Unknown action"))))
+    event-data))
 
 (defn route-click [e store routes]
   (let [href (find-target-href e)]
@@ -56,16 +77,13 @@
   (add-watch
     store ::render
     (fn [_ _ _ state]
-      (video/render-video state)
-      (prn "Rendering")
       (r/render el (ui/render-page state) {:alias-data {:routes router/routes}})))
 
   (r/set-dispatch!
-    (fn [event-data actions]
-      (->> actions
-           (interpolate-actions
-             (:replicant/dom-event event-data))
-           (execute-actions store))))
+    (fn [{:replicant/keys [dom-event]} event-data]
+      (->> (interpolate dom-event event-data)
+           (perform-actions @store)
+           (run! #(process-effect store %)))))
 
   (js/document.body.addEventListener
     "click"
