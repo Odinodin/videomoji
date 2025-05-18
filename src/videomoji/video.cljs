@@ -1,8 +1,8 @@
 (ns videomoji.video
   (:require
-    ["@mediapipe/tasks-vision" :as mp-vision]
-    [videomoji.emoji :as emoji]
-    [shadow.cljs.modern :refer (js-await)]))
+   ["@mediapipe/tasks-vision" :as mp-vision]
+   [shadow.cljs.modern :refer (js-await)]
+   [videomoji.emoji :as emoji]))
 
 (def local-state (atom {:emoji-kind :emoji-colored
                         :running? true}))
@@ -27,13 +27,27 @@
           (reset! imageSegmenter segmenter)
           true)))
 
-    ;; --- Error Handling ---
     (catch js/Error e
       (js/console.error "Failed to create Image Segmenter:" e)
-      ;; Indicate failure (optional)
       false)))
 
 (create-image-segmenter)
+
+(defn video-el [] (.querySelector js/document "video"))
+(defn canvas-el [] (.querySelector js/document "#offscreen-canvas"))
+(defn context2d [c] (.getContext c "2d" (clj->js {"willReadFrequently" true})))
+(defn content-el [] (.getElementById js/document "content"))
+
+(defn should-draw? []
+  (and (:running? @local-state)
+       (exists? (content-el))
+       (not (nil? (content-el)))
+       (exists? (video-el))
+       (not (nil? (video-el)))
+       (exists? (canvas-el))
+       (not (nil? (canvas-el)))
+       (exists? (context2d (canvas-el)))
+       (not (nil? (context2d (canvas-el))))))
 
 (defn dimensions [content-width aspect-ratio size]
   (let [font-size-in-px (get {"small" 10
@@ -48,69 +62,57 @@
      :font-size-in-px font-size-in-px}))
 
 (defn image-callback [result]
-  (let [context js/the-context
-        emoji-kind (:emoji-kind @local-state)
-        aspect-ratio (/ (.-videoHeight js/video) (.-videoWidth js/video))
-        {:keys [width height font-size-in-px]} (dimensions
-                                                 (.-offsetWidth js/content)
-                                                 aspect-ratio
-                                                 (or (:size @local-state) "small"))
+  (when (should-draw?)
 
-        original-data (.getImageData context 0 0 width height)
-        ^js image-data (.-data original-data)
+    (let [emoji-kind (:emoji-kind @local-state)
+          aspect-ratio (/ (.-videoHeight (video-el)) (.-videoWidth (video-el)))
+          {:keys [width height font-size-in-px]} (dimensions
+                                                   (.-offsetWidth (content-el))
+                                                   aspect-ratio
+                                                   (or (:size @local-state) "small"))
 
-        ;; --- 2. Get Mask Data ---
-        ;; Access the category mask and get it as a Float32Array
-        ^js mask (-> result .-categoryMask (.getAsUint8Array))
+          original-data (.getImageData (context2d (canvas-el)) 0 0 width height)
+          image-data (.-data original-data)
+          mask (-> result .-categoryMask (.getAsUint8Array))
+          mask-length (.-length mask)]
 
-        mask-length (.-length mask)]
-
-    (loop [i 0                                              ; Index for mask array
-           j 0]                                             ; Index for image-data array (steps by 4)
-      (when (< i mask-length)                               ; Loop while mask index is in bounds
-        (when (not= (aget mask i) 0)
-          (let [leg-r 255
-                leg-g 255
-                leg-b 255
-                leg-a 255]
-
+      (loop [i 0
+             j 0]
+        (when (< i mask-length)
+          (when (not= (aget mask i) 0)
             ;; Clear out the pixel
-            (aset image-data j leg-r)
-            (aset image-data (+ j 1) leg-g)
-            (aset image-data (+ j 2) leg-b)
-            (aset image-data (+ j 3) leg-a)))
+            (aset image-data j 255)
+            (aset image-data (+ j 1) 255)
+            (aset image-data (+ j 2) 255)
+            (aset image-data (+ j 3) 255))
 
-        ;; Move to the next mask value and the next pixel (4 steps in image-data)
-        (recur (inc i) (+ j 4))))
+          ;; Move to the next mask value and the next pixel (4 steps in image-data)
+          (recur (inc i) (+ j 4))))
 
-    (let [clamped (js/Uint8ClampedArray. (.-buffer image-data))
-          data-new (js/ImageData. clamped width height)
-          ascii-dom-element (emoji/convert-to-dom-element data-new js/document emoji-kind font-size-in-px)]
-      (.putImageData context data-new 0 0)
-      (.replaceChildren js/content ascii-dom-element))))
+      (let [clamped (js/Uint8ClampedArray. (.-buffer image-data))
+            data-new (js/ImageData. clamped width height)
+            ascii-dom-element (emoji/convert-to-dom-element data-new js/document emoji-kind font-size-in-px)]
+        (.putImageData (context2d (canvas-el)) data-new 0 0)
+        (.replaceChildren (content-el) ascii-dom-element)))))
+
+
 
 (defn draw-frame []
-  (when (and (:running? @local-state)
-             (exists? js/content)
-             (not (nil? js/content))
-             (exists? js/video)
-             (not (nil? js/video)))
+  (when (should-draw?)
 
-    (let [aspect-ratio (/ (.-videoHeight js/video) (.-videoWidth js/video))
-          {:keys [width height font-size-in-px]} (dimensions
-                                                   (.-offsetWidth js/content)
-                                                   aspect-ratio
-                                                   (or (:size @local-state) "small"))]
+    (let [video-height (.-videoHeight (video-el))
+          video-width (.-videoWidth (video-el))]
 
-      (let [canvas (.querySelector js/document "canvas")
-            context (.getContext canvas "2d" (clj->js {"willReadFrequently" true}))]
-
-        (set! (.-width canvas) width)
-        (set! (.-height canvas) height)
-
-        (.drawImage context js/video 0 0 width height)
-        (set! js/the-context context)
-        (.segment @imageSegmenter canvas image-callback)))))
+      (when (and (< 0 video-height) (< 0 video-width))
+        (let [aspect-ratio (/ video-height video-width)
+              {:keys [width height]} (dimensions
+                                       (.-offsetWidth (content-el))
+                                       aspect-ratio
+                                       (or (:size @local-state) "small"))]
+          (set! (.-width (canvas-el)) width)
+          (set! (.-height (canvas-el)) height)
+          (.drawImage (context2d (canvas-el)) (video-el) 0 0 width height)
+          (.segment @imageSegmenter (canvas-el) image-callback))))))
 
 (defn update-state [state]
   (let [size (-> state :videomoji.pages.main/view :size)
@@ -127,20 +129,17 @@
   (when-let [interval-id (@local-state :interval-id)]
     (js/clearInterval interval-id))
 
-  (set! js/video (.querySelector js/document "video"))
-
-  (when (and (exists? js/video)
-             (not (nil? js/video)))
+  (when (and (exists? (video-el))
+             (not (nil? (video-el))))
     (letfn [(handle-success [stream]
-              (set! (.-srcObject js/video) stream)
-              (.play js/video)
-              (set! js/content (.getElementById js/document "content")))
+              (set! (.-srcObject (video-el)) stream)
+              (.play (video-el)))
 
             (handle-error [error]
               (.log js/console "Error for getUserMedia: " (.-message error) (.-name error)))]
 
       (.addEventListener
-        js/video
+        (video-el)
         "canplay"
         (fn [ev] (swap! local-state assoc :interval-id (js/setInterval draw-frame 50)))
         #js {:once true})

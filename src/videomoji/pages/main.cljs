@@ -26,14 +26,14 @@
         ;; Necessary elements for reading the webcam and for rendering video bitmaps off screen
         ;; Note they are not visible to the user
         [:div {:class (css :absolute :top-4 :left-0 :z-40 {:display "none"})}
-         [:canvas]
+         [:canvas {:id "offscreen-canvas"}]
          [:video {:playsinline true :muted true :style {:position "sticky" :top "10px" :display "none"}}]]
 
-        [:div {:class (css :h-full :relative :text-center [:lg :text-right])}
+        [:div {:class (css :h-full :relative)}
          (when (-> state ::view :video-initialized?)
            (emojivideo state))
          (when (not (-> state ::view :video-initialized?))
-           [:div {:class (css :h-full :relative)}
+           [:div {:class (css :h-full :relative :text-center [:lg :text-right])}
             [:div {:class (css :absolute :overflow-hidden :top-0 :left-0 :right-0 :h-full)}
              (c/emoji-wall 2000 "✋")]
             [:div {:class (css :relative :flex :justify-center :items-center :h-full)}
