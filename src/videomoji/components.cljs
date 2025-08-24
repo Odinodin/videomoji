@@ -38,3 +38,14 @@
     [:ui/a {:ui/location {:location/page-id :pages/about}} "About"]
     [:ui/a {:ui/location {:location/page-id :pages/tech}} "Tech"]]
    content])
+
+(def css-link (css {:box-shadow "0 1.5px 0 var(--primary)" :transition "box-shadow 0.2s"}
+                 ["&:hover" {:box-shadow "0 0 0 transparent"}]))
+
+(defn link-internal [{:keys [text location]}]
+  [:ui/a {:ui/location location
+          :class css-link} text])
+
+(defn link-external [{:keys [text href]}]
+  [:a {:href href
+       :class css-link} (str text " ↗️")])

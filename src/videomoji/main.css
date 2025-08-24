@@ -28,3 +28,7 @@
   font-style: normal;
 }
 
+:root {
+    --primary: #3498db;
+    --secondary: #2ecc71;
+}

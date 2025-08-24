@@ -15,7 +15,8 @@
      [:p {:class (css :my-6 {:max-width "800px"})} "If you like Videomoji or have any comments or suggestions; I'd be really happy to hear about them."]
 
      [:p {:class (css :my-6 {:max-width "800px"})}
-      "Some years ago I wrote a blog post about how you could turn bitmaps into ASCII on the web. The basic principle is
+
+      "Some years ago I wrote a " (c/link-external {:text "blog post" :href "https://odinodin.no/posts/2023-02-ascii/"}) " about how you could turn bitmaps into ASCII on the web. The basic principle is
       to figure out what ASCII character that most closely matches the brightness of each pixel."]
      [:p {:class (css :my-6 {:max-width "800px"})}
       "That got me thinking, what if you used emojis instead of ASCII-characters? Turns out, that works really well.
@@ -33,4 +34,4 @@
       "Detecting a subject in a video stream, that has to be hard, right? Turns out, it's dead simple. People have
       already solved this problem for us."]
      [:div
-      " If you are interested in the techincal details, check out the " [:ui/a {:ui/location {:location/page-id :pages/tech}} "tech page"]]]))
+      " If you are interested in the technical details, check out the " (c/link-internal {:text "tech page" :location {:location/page-id :pages/tech}})]]))
